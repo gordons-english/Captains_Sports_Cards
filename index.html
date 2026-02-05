@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captain's Sports Cards</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        header {
+            background-color: #0d47a1; /* Classic Sports Blue */
+            color: white;
+            padding: 3rem 1rem;
+            text-align: center;
+        }
+        header h1 { 
+            margin: 0; 
+            font-size: 2.5rem; 
+            margin-bottom: 1rem;
+        }
+        header p { 
+            margin: 0 auto; 
+            font-size: 1.1rem; 
+            opacity: 0.95; 
+            max-width: 700px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card-link {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            text-decoration: none;
+            color: inherit;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .card-link:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+
+        .icon { font-size: 3rem; margin-bottom: 15px; }
+        .title { font-size: 1.5rem; font-weight: bold; margin-bottom: 10px; color: #0d47a1; }
+        .desc { color: #666; line-height: 1.5; }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Captain's Sports Cards</h1>
+        <p>
+            Welcome to Captain’s Sports Cards—a massive, time-capsule collection spanning the Golden Era of the mid-1950s through the boom of 1997. Originally the inventory of a beloved family card shop, these 30,000+ cards are now being organized and released to the public for the first time in over two decades.
+        </p>
+    </header>
+
+    <div class="container">
+        <a href="#" target="_blank" class="card-link">
+            <div class="icon">⚾</div>
+            <div class="title">Baseball Collection</div>
+            <div class="desc">Browse folders of vintage baseball cards sorted by year and player.</div>
+        </a>
+
+        <a href="#" target="_blank" class="card-link">
+            <div class="icon">🏈</div>
+            <div class="title">Football Collection</div>
+            <div class="desc">Explore the gridiron greats. Sorted by team and year.</div>
+        </a>
+
+        <a href="#" target="_blank" class="card-link">
+            <div class="icon">📦</div>
+            <div class="title">Unsorted / New Arrivals</div>
+            <div class="desc">Fresh inventory currently being processed and cataloged.</div>
+        </a>
+    </div>
+
+    <footer>
+        &copy; 2026 Captain's Sports Cards. All rights reserved.
+    </footer>
+
+</body>
+</html>

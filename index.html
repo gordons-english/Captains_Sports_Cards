@@ -81,31 +81,51 @@
         </p>
     </header>
 
-    <div class="container">
-        <a href="#" target="_blank" class="card-link">
-            <div class="icon">⚾</div>
-            <div class="title">Baseball Collection</div>
-            <div class="desc">Browse folders of vintage baseball cards sorted by year and player.</div>
-        </a>
+    <div style="text-align:center; margin: 40px auto; max-width: 500px; padding: 0 20px;">
+    <h3 style="color: #0d47a1;">Search the Collection</h3>
+    <input type="text" id="cardSearch" placeholder="Try '1952' or 'Mantle'..." 
+           style="padding: 12px; width: 100%; border-radius: 25px; border: 2px solid #0d47a1; font-size: 1rem; outline: none;">
+    <div id="results" style="margin-top: 5px; text-align: left; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden;"></div>
+</div>
 
-        <a href="#" target="_blank" class="card-link">
-            <div class="icon">🏈</div>
-            <div class="title">Football Collection</div>
-            <div class="desc">Explore the gridiron greats. Sorted by team and year.</div>
-        </a>
-        
-        <a href="#" target="_blank" class="card-link">
-            <div class="icon">🏒</div>
-            <div class="title">Hockey Collection</div>
-            <div class="desc">Original Six classics to the 90s boom. Parkhurst, Topps, and O-Pee-Chee.</div>
-        </a>
-        
-        <a href="#" target="_blank" class="card-link">
-            <div class="icon">📦</div>
-            <div class="title">Unsorted / New Arrivals</div>
-            <div class="desc">Fresh inventory currently being processed and cataloged.</div>
-        </a>
-    </div>
+<script>
+  // PASTE YOUR WEB APP URL BETWEEN THE QUOTES BELOW
+  const API_URL = "https://script.google.com/macros/s/AKfycbzhppX0VUTBF3BuJBmGaPohd7px0rcftQ15b8S0dkFyA0UB-igGYKMWApg91B4J6S0-/exec";
+
+  let baseballData = [];
+
+  async function loadInventory() {
+    try {
+      const response = await fetch(API_URL);
+      baseballData = await response.json();
+    } catch (e) {
+      console.error("Could not load folders", e);
+    }
+  }
+
+  const searchInput = document.getElementById('cardSearch');
+  const resultsDiv = document.getElementById('results');
+
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.toLowerCase();
+    resultsDiv.innerHTML = '';
+    
+    if (term.length < 2) return;
+
+    const matches = baseballData.filter(f => f.name.toLowerCase().includes(term));
+    
+    matches.forEach(match => {
+      const div = document.createElement('div');
+      div.style.padding = "12px 20px";
+      div.style.borderBottom = "1px solid #eee";
+      div.innerHTML = `<a href="${match.link}" target="_blank" style="text-decoration:none; color:#0d47a1; font-weight:bold; display:block;">${match.name}</a>`;
+      resultsDiv.appendChild(div);
+    });
+  });
+
+  // Load the data as soon as the page opens
+  loadInventory();
+</script>
 
     <footer>
         &copy; 2026 Captain's Sports Cards. All rights reserved.

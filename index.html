@@ -87,7 +87,14 @@
                style="padding: 12px; width: 100%; border-radius: 25px; border: 2px solid #0d47a1; font-size: 1rem; outline: none;">
         <div id="results" style="margin-top: 5px; text-align: left; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; position: relative; z-index: 10;"></div>
     </div>
-
+<div id="orderTally" style="position: fixed; bottom: 20px; right: 20px; width: 300px; background: white; border: 2px solid #0d47a1; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); padding: 15px; z-index: 100; display: none;">
+        <h4 style="margin: 0 0 10px 0; color: #0d47a1;">Current Bulk Order</h4>
+        <div id="orderList" style="max-height: 200px; overflow-y: auto; font-size: 0.85rem; margin-bottom: 10px; border-bottom: 1px solid #eee;"></div>
+        <div style="font-weight: bold; margin-bottom: 10px;">Total Items: <span id="itemCount">0</span></div>
+        <p style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">*Minimum bulk purchase requirements apply.</p>
+        <button onclick="copyOrder()" style="width: 100%; padding: 10px; background: #0d47a1; color: white; border: none; border-radius: 5px; cursor: pointer;">Copy Order to Clipboard</button>
+    </div>
+    
     <div class="container" style="margin-top: 20px; position: relative; z-index: 1;">
         <a href="https://drive.google.com/drive/folders/1DzmzlE23oWT2Y6hCCFBbdSQWroARCylg?usp=sharing" target="_blank" class="card-link">
             <div class="icon">⚾</div>
@@ -107,18 +114,12 @@
             <div class="desc">Original Six classics to the 90s boom. Parkhurst, Topps, and O-Pee-Chee.</div>
         </a>
 
-        <a href="#" target="_blank" class="card-link">
-            <div class="icon">📦</div>
-            <div class="title">Unsorted / New Arrivals</div>
-            <div class="desc">Fresh inventory currently being processed and cataloged.</div>
-        </a>
-    </div>
-
-    <script>
-      // PASTE YOUR WEB APP URL BETWEEN THE QUOTES BELOW
+       <script>
       const API_URL = "https://script.google.com/macros/s/AKfycbzhppX0VUTBF3BuJBmGaPohd7px0rcftQ15b8S0dkFyA0UB-igGYKMWApg91B4J6S0-/exec";
       let baseballData = [];
+      let currentOrder = [];
 
+      // Load inventory from Apps Script
       async function loadInventory() {
         try {
           const response = await fetch(API_URL);
@@ -129,18 +130,51 @@
       const searchInput = document.getElementById('cardSearch');
       const resultsDiv = document.getElementById('results');
 
+      // Search Logic
       searchInput.addEventListener('input', () => {
         const term = searchInput.value.toLowerCase();
         resultsDiv.innerHTML = '';
         if (term.length < 2) return;
+
         const matches = baseballData.filter(f => f.name.toLowerCase().includes(term));
+        
         matches.forEach(match => {
           const div = document.createElement('div');
           div.style.padding = "12px 20px";
           div.style.borderBottom = "1px solid #eee";
-          div.innerHTML = `<a href="${match.link}" target="_blank" style="text-decoration:none; color:#0d47a1; font-weight:bold; display:block;">${match.name}</a>`;
+          div.style.display = "flex";
+          div.style.justifyContent = "space-between";
+          div.style.alignItems = "center";
+          
+          div.innerHTML = `
+            <a href="${match.link}" target="_blank" style="text-decoration:none; color:#0d47a1; font-weight:bold;">${match.name}</a>
+            <button onclick="addToOrder('${match.name}')" style="padding: 5px 10px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">+ Add to Order</button>
+          `;
           resultsDiv.appendChild(div);
         });
       });
+
+      // Tally Box Logic
+      function addToOrder(name) {
+        currentOrder.push(name);
+        document.getElementById('orderTally').style.display = 'block';
+        updateOrderUI();
+      }
+
+      function updateOrderUI() {
+        const list = document.getElementById('orderList');
+        list.innerHTML = currentOrder.map(item => `<div style="padding: 3px 0; border-bottom: 1px solid #f0f0f0;">• ${item}</div>`).join('');
+        document.getElementById('itemCount').innerText = currentOrder.length;
+      }
+
+      function copyOrder() {
+        const orderText = "I am interested in the following bulk lots from Captain's Sports Cards:\n\n" + currentOrder.join('\n');
+        navigator.clipboard.writeText(orderText).then(() => {
+          alert("Order copied to clipboard! You can now paste this into an email to Captain Barbosa.");
+        });
+      }
+
       loadInventory();
     </script>
+</body>
+</html>

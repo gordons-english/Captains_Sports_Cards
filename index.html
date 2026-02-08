@@ -232,7 +232,11 @@
 
         function openFolder(folderObj) { currentPath.push(currentFolder); currentFolder = folderObj; render(); window.scrollTo(0, 0); }
         function goUpLevel() { if (currentPath.length > 0) { currentFolder = currentPath.pop(); render(); } }
-        function goHome() { currentPath = []; currentFolder = inventoryDB; render(); }
+        function goHome() { 
+            currentPath = []; 
+            currentFolder = inventoryDB; 
+            render(); 
+        }
         function navigateToBreadcrumb(index) { currentFolder = currentPath[index]; currentPath = currentPath.slice(0, index); render(); }
 
         function toggleSelection(filename, price, cardElement) {

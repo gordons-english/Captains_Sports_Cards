@@ -27,16 +27,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .card-lot.selected { border: 4px solid #10B981; opacity: 0.9; transform: scale(0.98); }
         .folder-item { transition: all 0.2s ease; cursor: pointer; }
         .folder-item:hover { background-color: #f3f4f6; transform: scale(1.02); }
+        
+        /* Modal for Zoom */
+        #zoom-modal { transition: opacity 0.3s ease; pointer-events: none; opacity: 0; }
+        #zoom-modal.active { pointer-events: auto; opacity: 1; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
+
+    <!-- ZOOM MODAL -->
+    <div id="zoom-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-90 p-4" onclick="closeZoom()">
+        <img id="zoom-img" src="" class="max-w-full max-h-full rounded shadow-2xl" onclick="event.stopPropagation()">
+        <button class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300" onclick="closeZoom()">&times;</button>
+    </div>
 
     <!-- STICKY TOTAL BAR -->
     <div class="fixed top-0 left-0 w-full bg-slate-900 text-white shadow-lg z-50 border-b-4 border-yellow-500">
         <div class="container mx-auto px-4 h-16 flex justify-between items-center">
             <div class="flex items-center space-x-2 cursor-pointer" onclick="goHome()">
                 <i class="fa-solid fa-layer-group text-yellow-500 text-xl"></i>
-                <span class="text-xl font-bold brand-font tracking-wider">CAPTAIN'S VAULT</span>
+                <span class="text-xl font-bold brand-font tracking-wider">CAPTAIN'S SPORTS CARDS</span>
             </div>
             <div class="flex items-center space-x-6">
                 <div class="text-right hidden sm:block">
@@ -64,7 +74,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <ul class="text-sm text-blue-900 space-y-2 mt-2">
                     <li class="flex items-start"><i class="fa-solid fa-images mt-1 mr-2 opacity-70"></i> <span><strong>One Image = One Lot:</strong> You are purchasing the entire group of cards shown. We do not pick individual cards.</span></li>
                     <li class="flex items-start"><i class="fa-solid fa-tag mt-1 mr-2 opacity-70"></i> <span><strong>Transparent Pricing:</strong> The price for the lot is listed in the filename (e.g., <code>..._25.00.jpg</code>).</span></li>
-                    <li class="flex items-start"><i class="fa-solid fa-calculator mt-1 mr-2 opacity-70"></i> <span><strong>Click to Add:</strong> Clicking an image adds its price to your Running Total above.</span></li>
+                    <li class="flex items-start"><i class="fa-solid fa-calculator mt-1 mr-2 opacity-70"></i> <span><strong>Click Add:</strong> Use the Add button to put the lot in your cart.</span></li>
                 </ul>
                 <div class="mt-4 pt-3 border-t border-blue-200 text-center">
                     <a href="#" class="text-blue-700 font-bold hover:underline text-xs uppercase tracking-wide">
@@ -110,6 +120,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function getPriceFromFilename(filename) {
             const match = filename.match(/_([0-9]+\.?[0-9]*)\.(jpg|jpeg|png|webp)$/i);
             return (match && match[1]) ? parseFloat(match[1]) : 0.00;
+        }
+
+        function openZoom(src) {
+            document.getElementById('zoom-img').src = src;
+            document.getElementById('zoom-modal').classList.add('active');
+        }
+
+        function closeZoom() {
+            document.getElementById('zoom-modal').classList.remove('active');
         }
 
         function render() {
@@ -160,8 +179,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     const price = getPriceFromFilename(item.name);
                     const isSelected = selectedLots.has(item.name);
                     const card = document.createElement('div');
-                    card.className = `card-lot bg-white rounded-lg shadow overflow-hidden relative cursor-pointer ${isSelected ? 'selected' : ''}`;
-                    card.onclick = () => toggleSelection(item.name, price, card);
+                    card.className = `card-lot bg-white rounded-lg shadow overflow-hidden relative ${isSelected ? 'selected' : ''}`;
+                    // We removed the onclick from the card container so we can separate zoom and add actions
+                    
                     const encodedPath = item.name.split('/').map(encodeURIComponent).join('/');
                     
                     const btnColor = isSelected ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700';
@@ -169,14 +189,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                     card.innerHTML = `
                         <div class="h-64 bg-slate-200 flex items-center justify-center text-slate-400 relative overflow-hidden group">
-                            <img src="${encodedPath}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.parentElement.innerHTML='<i class=\\'fa-solid fa-image text-4xl\\'></i><span class=\\'ml-2\\'>Image not found</span>'">
+                            <img src="${encodedPath}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-pointer" onclick="openZoom('${encodedPath}')" onerror="this.parentElement.innerHTML='<i class=\\'fa-solid fa-image text-4xl\\'></i><span class=\\'ml-2\\'>Image not found</span>'">
+                            
+                            <!-- Zoom Icon Overlay -->
+                            <div class="absolute top-2 right-2 bg-black bg-opacity-60 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer pointer-events-none">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                            </div>
                         </div>
                         <div class="p-4">
                             <div class="flex justify-between items-start mb-2">
                                 <h3 class="font-bold text-lg text-slate-800 leading-tight truncate pr-2" title="${item.title}">${item.title}</h3>
                                 <span class="bg-green-100 text-green-800 text-lg font-bold px-2 py-1 rounded whitespace-nowrap">$${price.toFixed(2)}</span>
                             </div>
-                            <div class="mt-4 w-full ${btnColor} text-white text-center py-2 rounded font-bold transition shadow-sm">${btnText}</div>
+                            <!-- Button handles selection separately -->
+                            <div class="mt-4 w-full ${btnColor} text-white text-center py-2 rounded font-bold transition shadow-sm cursor-pointer" onclick="toggleSelection('${item.name}', ${price})">${btnText}</div>
                         </div>`;
                     grid.appendChild(card);
                 }
@@ -192,7 +218,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         function navigateToBreadcrumb(index) { currentFolder = currentPath[index]; currentPath = currentPath.slice(0, index); render(); }
 
-        function toggleSelection(filename, price, cardElement) {
+        function toggleSelection(filename, price) {
+            // No cardElement passed because we re-render anyway
             if (selectedLots.has(filename)) { selectedLots.delete(filename); currentTotal -= price; } 
             else { selectedLots.add(filename); currentTotal += price; }
             render(); updateTotalDisplay();

@@ -31,7 +31,10 @@
             justify-content: center;
             align-items: center;
             overflow: hidden; /* Hide scrollbars, we use drag */
-            cursor: grab;
+            cursor: zoom-in;
+        }
+        #zoom-container.zoomed {
+            cursor: zoom-out;
         }
         #zoom-container.grabbing {
             cursor: grabbing;
@@ -43,11 +46,6 @@
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             transition: transform 0.3s ease; /* Smooth zoom */
             transform-origin: center center;
-        }
-        #zoom-img.zoomed {
-            max-height: none;
-            max-width: none;
-            /* Scale is handled by JS now for point-zoom */
         }
     </style>
 </head>
@@ -218,7 +216,7 @@
             translateY = 0;
             isZoomed = false;
             img.style.transform = `translate(0px, 0px) scale(1)`;
-            img.classList.remove('zoomed');
+            document.getElementById('zoom-container').classList.remove('zoomed');
             document.getElementById('zoom-modal').classList.add('active');
         }
 
@@ -235,7 +233,7 @@
             if (!isZoomed) {
                 // ZOOM IN
                 isZoomed = true;
-                scale = 2.5; // Zoom level
+                scale = 2.0; // Reduced Zoom level from 2.5 to 2.0
                 
                 // Calculate click position relative to the image
                 const rect = img.getBoundingClientRect();
@@ -251,8 +249,7 @@
                 img.style.transform = `scale(${scale})`;
                 
                 // Change cursor to grab
-                container.style.cursor = 'grab';
-                img.classList.add('zoomed');
+                container.classList.add('zoomed');
             } else {
                 // ZOOM OUT (Reset)
                 isZoomed = false;
@@ -260,24 +257,23 @@
                 translateX = 0;
                 translateY = 0;
                 img.style.transform = `translate(0px, 0px) scale(1)`;
-                container.style.cursor = 'zoom-in';
-                img.classList.remove('zoomed');
+                container.classList.remove('zoomed');
             }
         }
 
         function startDrag(e) {
             if (!isZoomed) return;
-            isDragging = false; // Will set to true on move
+            // Only start drag if dragging on the container or image
+            isDragging = false; 
             startX = e.clientX - translateX;
             startY = e.clientY - translateY;
             document.getElementById('zoom-container').classList.add('grabbing');
-            // Prevent default drag behavior
             e.preventDefault(); 
         }
 
         function endDrag() {
             document.getElementById('zoom-container').classList.remove('grabbing');
-            // Delay resetting isDragging slightly so click event knows if it was a drag
+            // Small timeout to prevent click event triggering immediately after drag
             setTimeout(() => isDragging = false, 50); 
         }
 
@@ -288,10 +284,6 @@
                 translateX = e.clientX - startX;
                 translateY = e.clientY - startY;
                 const img = document.getElementById('zoom-img');
-                // Keep transform-origin logic but add translation
-                // Note: Mixing origin-based zoom with translation can be tricky. 
-                // Simpler approach for pan: Just translate.
-                // But since we used origin for the initial zoom target, we need to maintain scale.
                 img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
             }
         }

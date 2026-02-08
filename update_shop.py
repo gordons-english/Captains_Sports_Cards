@@ -297,6 +297,16 @@ def generate_and_update():
 def push_to_github():
     print("\n--- Uploading to GitHub ---")
     try:
+        # Check if remote exists
+        remote_check = subprocess.run(["git", "remote", "-v"], capture_output=True, text=True, cwd=SCRIPT_DIR)
+        if not remote_check.stdout:
+             print("❌ Error: No remote repository configured. Please run 'git remote add origin <URL>' manually first.")
+             return
+
+        # Ensure we are on main branch
+        subprocess.run(["git", "branch", "-M", "main"], check=True, cwd=SCRIPT_DIR)
+        
+        # Add all files
         subprocess.run(["git", "add", "."], check=True, cwd=SCRIPT_DIR)
         
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=SCRIPT_DIR)
@@ -305,7 +315,7 @@ def push_to_github():
             return
 
         subprocess.run(["git", "commit", "-m", "Auto-update"], check=True, cwd=SCRIPT_DIR)
-        subprocess.run(["git", "push"], check=True, cwd=SCRIPT_DIR)
+        subprocess.run(["git", "push", "-u", "origin", "main"], check=True, cwd=SCRIPT_DIR)
         print("\n✅ DONE! Website updated.")
     except subprocess.CalledProcessError as e:
         print(f"\n❌ Git Error: {e}")

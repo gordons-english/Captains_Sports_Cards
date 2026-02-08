@@ -57,7 +57,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             max-width: 90vw;
             object-fit: contain;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            transition: transform 0.3s ease; /* Smooth zoom */
+            transition: transform 0.1s ease-out; /* Faster for wheel zoom */
             transform-origin: center center;
         }
     </style>
@@ -69,7 +69,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <!-- Close button needs to be outside the drag area or highest z-index -->
         <button class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 focus:outline-none z-[102]" onclick="closeZoom()">&times;</button>
         
-        <div id="zoom-container" onmousedown="startDrag(event)" onmouseup="endDrag()" onmouseleave="endDrag()" onmousemove="drag(event)" onclick="handleZoomClick(event)">
+        <div id="zoom-container" onmousedown="startDrag(event)" onmouseup="endDrag()" onmouseleave="endDrag()" onmousemove="drag(event)" onclick="handleZoomClick(event)" onwheel="handleWheelZoom(event)">
             <img id="zoom-img" src="" class="rounded" draggable="false">
         </div>
     </div>
@@ -187,7 +187,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (!isZoomed) {
                 // ZOOM IN
                 isZoomed = true;
-                scale = 1.5; // Reduced Zoom level from 2.0 to 1.5
+                scale = 1.5; 
                 
                 // Calculate click position relative to the image
                 const rect = img.getBoundingClientRect();
@@ -212,6 +212,45 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 translateY = 0;
                 img.style.transform = `translate(0px, 0px) scale(1)`;
                 container.classList.remove('zoomed');
+            }
+        }
+
+        function handleWheelZoom(event) {
+            if (event.ctrlKey) {
+                event.preventDefault(); // Prevent page scroll
+                const img = document.getElementById('zoom-img');
+                const container = document.getElementById('zoom-container');
+
+                // Determine zoom direction
+                const delta = event.deltaY > 0 ? -0.1 : 0.1;
+                const newScale = scale + delta;
+
+                // Limit scale
+                if (newScale >= 1 && newScale <= 5) {
+                    scale = newScale;
+                    
+                    // If zooming from scale 1, set origin based on mouse position
+                    if (!isZoomed && scale > 1) {
+                        isZoomed = true;
+                        container.classList.add('zoomed');
+                        
+                        const rect = img.getBoundingClientRect();
+                        const offsetX = event.clientX - rect.left;
+                        const offsetY = event.clientY - rect.top;
+                        const percentX = offsetX / rect.width;
+                        const percentY = offsetY / rect.height;
+                        img.style.transformOrigin = `${percentX * 100}% ${percentY * 100}%`;
+                    } else if (scale <= 1) {
+                        isZoomed = false;
+                        scale = 1;
+                        translateX = 0;
+                        translateY = 0;
+                        container.classList.remove('zoomed');
+                    }
+
+                    // Apply transform (maintain pan if already zoomed)
+                    img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+                }
             }
         }
 

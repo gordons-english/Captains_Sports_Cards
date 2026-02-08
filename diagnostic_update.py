@@ -1,4 +1,17 @@
-<!DOCTYPE html>
+import os
+import json
+import re
+import subprocess
+import sys
+import traceback
+
+# --- CONFIGURATION ---
+IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif'}
+IGNORE_LIST = {'.git', 'index.html', 'update_shop.py', 'fix_filenames.py', '.DS_Store', 'node_modules', '__pycache__'}
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# --- THE HEADER TEMPLATE ---
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -108,66 +121,7 @@
     <!-- LOGIC -->
     <script>
         // --- INVENTORY ---
-        const inventoryDB = {
-    "name": "Home",
-    "type": "folder",
-    "contents": [
-        {
-            "name": "All Stars",
-            "type": "folder",
-            "contents": [
-                {
-                    "name": "All Stars/1968 All Stars_100.jpg",
-                    "type": "file",
-                    "title": "1968 All Stars_100"
-                },
-                {
-                    "name": "All Stars/1973_All_Stars_50.jpg",
-                    "type": "file",
-                    "title": "1973_All_Stars_50"
-                }
-            ]
-        },
-        {
-            "name": "Vintage",
-            "type": "folder",
-            "contents": [
-                {
-                    "name": "Leaders",
-                    "type": "folder",
-                    "contents": [
-                        {
-                            "name": "Vintage/Leaders/1965_Leaders_100.jpg",
-                            "type": "file",
-                            "title": "1965_Leaders_100"
-                        },
-                        {
-                            "name": "Vintage/Leaders/1968_HR_Leaders_50.jpg",
-                            "type": "file",
-                            "title": "1968_HR_Leaders_50"
-                        },
-                        {
-                            "name": "Vintage/Leaders/1969_Leaders_120.jpg",
-                            "type": "file",
-                            "title": "1969_Leaders_120"
-                        }
-                    ]
-                },
-                {
-                    "name": "Rookies",
-                    "type": "folder",
-                    "contents": [
-                        {
-                            "name": "Vintage/Rookies/1963_64_65_66_Rookie_Stars_100.jpg",
-                            "type": "file",
-                            "title": "1963_64_65_66_Rookie_Stars_100"
-                        }
-                    ]
-                }
-            ]
-        }
-    ]
-};
+        const inventoryDB = {INVENTORY_PLACEHOLDER};
 
         // --- STATE ---
         let currentPath = [];
@@ -250,7 +204,7 @@
 
                     card.innerHTML = `
                         <div class="h-64 bg-slate-200 flex items-center justify-center text-slate-400 relative overflow-hidden group">
-                            <img src="${encodedPath}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-pointer" onclick="openZoom('${encodedPath}')" onerror="this.parentElement.innerHTML='<i class=\'fa-solid fa-image text-4xl\'></i><span class=\'ml-2\'>Image not found</span>'">
+                            <img src="${encodedPath}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-pointer" onclick="openZoom('${encodedPath}')" onerror="this.parentElement.innerHTML='<i class=\\'fa-solid fa-image text-4xl\\'></i><span class=\\'ml-2\\'>Image not found</span>'">
                             
                             <!-- Zoom Icon Overlay -->
                             <div class="absolute top-2 right-2 bg-black bg-opacity-60 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer pointer-events-none">
@@ -303,10 +257,89 @@
         function processCheckout() {
             if (currentTotal >= MINIMUM_ORDER) {
                 const lotCount = selectedLots.size;
-                alert(`Proceeding to checkout!\n\nLots Selected: ${lotCount}\nTotal: $${currentTotal.toFixed(2)}`);
+                alert(`Proceeding to checkout!\\n\\nLots Selected: ${lotCount}\\nTotal: $${currentTotal.toFixed(2)}`);
             }
         }
         render();
     </script>
 </body>
 </html>
+"""
+
+def scan_directory(base_path, relative_path=""):
+    contents = []
+    current_scan_path = os.path.join(base_path, relative_path)
+    try:
+        items = os.listdir(current_scan_path)
+    except OSError:
+        return []
+    items.sort()
+    for item in items:
+        if item in IGNORE_LIST: continue
+        full_path = os.path.join(current_scan_path, item)
+        item_rel_path = os.path.join(relative_path, item) if relative_path else item
+        
+        if os.path.isdir(full_path):
+            folder_obj = { "name": item, "type": "folder", "contents": scan_directory(base_path, item_rel_path) }
+            if folder_obj["contents"]: contents.append(folder_obj)
+        elif os.path.isfile(full_path):
+            ext = os.path.splitext(item)[1].lower()
+            if ext in IMAGE_EXTENSIONS:
+                web_path = item_rel_path.replace("\\", "/")
+                contents.append({ "name": web_path, "type": "file", "title": os.path.splitext(item)[0] })
+    return contents
+
+def generate_and_update():
+    # 1. Scan
+    print("--- Scanning Inventory ---")
+    inventory_structure = { "name": "Home", "type": "folder", "contents": scan_directory(SCRIPT_DIR) }
+    
+    # 2. Inject into Template
+    inventory_json = json.dumps(inventory_structure, indent=4)
+    final_html = HTML_TEMPLATE.replace("{INVENTORY_PLACEHOLDER}", inventory_json)
+    
+    # 3. Write index.html
+    try:
+        with open(os.path.join(SCRIPT_DIR, 'index.html'), 'w', encoding='utf-8') as f:
+            f.write(final_html)
+        print("✅ SUCCESS: Rebuilt index.html with new inventory and header.")
+    except Exception as e:
+        print(f"❌ Error writing file: {e}")
+        return False
+    return True
+
+def push_to_github():
+    print("\n--- Uploading to GitHub ---")
+    try:
+        # Check if remote exists
+        remote_check = subprocess.run(["git", "remote", "-v"], capture_output=True, text=True, cwd=SCRIPT_DIR)
+        if not remote_check.stdout:
+             print("❌ Error: No remote repository configured. Please run 'git remote add origin <URL>' manually first.")
+             return
+
+        # Ensure we are on main branch
+        subprocess.run(["git", "branch", "-M", "main"], check=True, cwd=SCRIPT_DIR)
+        
+        # Add all files
+        subprocess.run(["git", "add", "."], check=True, cwd=SCRIPT_DIR)
+        
+        status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=SCRIPT_DIR)
+        if not status.stdout.strip():
+            print("   No changes to upload.")
+            return
+
+        subprocess.run(["git", "commit", "-m", "Auto-update"], check=True, cwd=SCRIPT_DIR)
+        subprocess.run(["git", "push", "-u", "origin", "main"], check=True, cwd=SCRIPT_DIR)
+        print("\n✅ DONE! Website updated.")
+    except subprocess.CalledProcessError as e:
+        print(f"\n❌ Git Error: {e}")
+
+if __name__ == "__main__":
+    try:
+        if generate_and_update():
+            push_to_github()
+    except Exception:
+        traceback.print_exc()
+    
+    # This prevents the window from closing instantly if there's a crash
+    input("\nPress Enter to exit...")

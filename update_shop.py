@@ -36,11 +36,57 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             background-color: rgba(0, 0, 0, 0.9);
         }
         #zoom-modal.active { pointer-events: auto; opacity: 1; }
+        
+        /* Zoom Lens Container */
+        .img-zoom-container {
+            position: relative;
+            display: inline-block;
+        }
+        
         #zoom-img {
-            max-height: 90vh;
-            max-width: 90vw;
+            max-height: 80vh;
+            max-width: 80vw;
             object-fit: contain;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            cursor: none; /* Hide default cursor when hovering */
+        }
+
+        .img-zoom-lens {
+            position: absolute;
+            border: 1px solid #d4d4d4;
+            /*set the size of the lens:*/
+            width: 100px;
+            height: 100px;
+            background-color: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            pointer-events: none; /* Allows clicking through the lens */
+            display: none;
+            z-index: 1000;
+        }
+
+        .img-zoom-result {
+            border: 1px solid #d4d4d4;
+            /*set the size of the result div:*/
+            width: 300px;
+            height: 300px;
+            position: absolute;
+            top: 0;
+            left: 105%; /* Position to the right of the image */
+            z-index: 1000;
+            background-repeat: no-repeat;
+            display: none;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            background-color: white;
+        }
+        
+        /* Media query to hide result on small screens or adjust position */
+        @media (max-width: 1024px) {
+            .img-zoom-result {
+                display: none !important; /* Disable lens zoom on mobile/tablets */
+            }
+            #zoom-img {
+                cursor: default;
+            }
         }
     </style>
 </head>
@@ -48,8 +94,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <!-- ZOOM MODAL -->
     <div id="zoom-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" onclick="closeZoom()">
-        <div class="relative">
-            <img id="zoom-img" src="" class="rounded" onclick="event.stopPropagation()">
+        <div class="relative img-zoom-container" onclick="event.stopPropagation()">
+            <img id="zoom-img" src="" class="rounded">
+            <div id="zoom-lens" class="img-zoom-lens"></div>
+            <div id="zoom-result" class="img-zoom-result"></div>
             <button class="absolute -top-10 right-0 text-white text-4xl hover:text-gray-300 focus:outline-none" onclick="closeZoom()">&times;</button>
         </div>
     </div>
@@ -131,209 +179,84 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         // --- FUNCTIONS ---
         function getPriceFromFilename(filename) {
-            const match = filename.match(/_([0-9]+\.?[0-9]*)\.(jpg|jpeg|png|webp)$/i);
+            const match = filename.match(/[\$_ ]([0-9]+\.?[0-9]*)\.(jpg|jpeg|png|webp|gif)$/i);
             return (match && match[1]) ? parseFloat(match[1]) : 0.00;
         }
 
         function openZoom(src) {
-            document.getElementById('zoom-img').src = src;
-            document.getElementById('zoom-modal').classList.add('active');
+            const modal = document.getElementById('zoom-modal');
+            const img = document.getElementById('zoom-img');
+            const result = document.getElementById('zoom-result');
+            const lens = document.getElementById('zoom-lens');
+            
+            img.src = src;
+            modal.classList.add('active');
+            
+            // Wait for image to load to initialize zoom
+            img.onload = function() {
+                initImageZoom(img, result, lens);
+            };
         }
 
         function closeZoom() {
             document.getElementById('zoom-modal').classList.remove('active');
+            // Hide zoom elements
+            document.getElementById('zoom-result').style.display = "none";
+            document.getElementById('zoom-lens').style.display = "none";
         }
+        
+        function initImageZoom(img, result, lens) {
+            let cx, cy;
 
-        function render() {
-            const grid = document.getElementById('content-grid');
-            const breadcrumbs = document.getElementById('breadcrumbs');
-            const backBtn = document.getElementById('back-button-container');
+            // Show elements on mouse enter
+            img.addEventListener("mouseenter", function() {
+                // Only enable if screen is wide enough
+                if (window.innerWidth > 1024) {
+                    result.style.display = "block";
+                    lens.style.display = "block";
+                    
+                    // Calculate ratios
+                    /* Calculate the ratio between result DIV and lens: */
+                    cx = result.offsetWidth / lens.offsetWidth;
+                    cy = result.offsetHeight / lens.offsetHeight;
+
+                    /* Set background properties for the result DIV */
+                    result.style.backgroundImage = "url('" + img.src + "')";
+                    result.style.backgroundSize = (img.width * cx) + "px " + (img.height * cy) + "px";
+                }
+            });
+
+            // Hide on mouse leave
+            img.addEventListener("mouseleave", function() {
+                result.style.display = "none";
+                lens.style.display = "none";
+            });
+
+            lens.addEventListener("mousemove", moveLens);
+            img.addEventListener("mousemove", moveLens);
             
-            grid.innerHTML = '';
-            breadcrumbs.innerHTML = '';
+            /* And also for touch screens: */
+            lens.addEventListener("touchmove", moveLens);
+            img.addEventListener("touchmove", moveLens);
 
-            // Breadcrumbs
-            if (currentPath.length === 0) {
-                breadcrumbs.innerHTML = '<span class="text-gray-500">Main Vault</span>';
-                backBtn.classList.add('hidden');
-            } else {
-                let html = '';
-                currentPath.forEach((folder, index) => {
-                    html += `<span class="cursor-pointer hover:underline text-blue-600" onclick="navigateToBreadcrumb(${index})">${folder.name}</span>`;
-                    if (index < currentPath.length - 1) html += ` <span class="text-gray-400">/</span> `;
-                });
-                if (currentPath.length > 0) {
-                     html += ` <span class="text-gray-400">/</span> <span class="text-slate-900 font-bold">${currentFolder.name}</span>`;
-                }
-                breadcrumbs.innerHTML = html;
-                backBtn.classList.remove('hidden');
-            }
-
-            // Contents
-            const contents = currentFolder.contents || [];
-            const sortedContents = [...contents].sort((a, b) => {
-                if (a.type === b.type) return 0;
-                return a.type === 'folder' ? -1 : 1;
-            });
-
-            if (sortedContents.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400"><i class="fa-regular fa-folder-open text-6xl mb-4"></i><p>This folder is empty.</p></div>`;
-                return;
-            }
-
-            sortedContents.forEach(item => {
-                if (item.type === 'folder') {
-                    const folderEl = document.createElement('div');
-                    folderEl.className = 'folder-item bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col items-center justify-center text-center h-48';
-                    folderEl.onclick = () => openFolder(item);
-                    folderEl.innerHTML = `<i class="fa-solid fa-folder text-6xl text-yellow-500 mb-4"></i><h3 class="text-xl font-bold text-slate-800 truncate w-full" title="${item.name}">${item.name}</h3><p class="text-sm text-gray-500 mt-1">${item.contents ? item.contents.length : 0} Items</p>`;
-                    grid.appendChild(folderEl);
-                } else {
-                    const price = getPriceFromFilename(item.name);
-                    const isSelected = selectedLots.has(item.name);
-                    const card = document.createElement('div');
-                    card.className = `card-lot bg-white rounded-lg shadow overflow-hidden relative ${isSelected ? 'selected' : ''}`;
-                    // We removed the onclick from the card container so we can separate zoom and add actions
-                    
-                    const encodedPath = item.name.split('/').map(encodeURIComponent).join('/');
-                    
-                    const btnColor = isSelected ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700';
-                    const btnText = isSelected ? '<i class="fa-solid fa-trash mr-1"></i> Remove' : '<i class="fa-solid fa-cart-plus mr-1"></i> Add to Cart';
-
-                    card.innerHTML = `
-                        <div class="h-64 bg-slate-200 flex items-center justify-center text-slate-400 relative overflow-hidden group">
-                            <img src="${encodedPath}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 cursor-pointer" onclick="openZoom('${encodedPath}')" onerror="this.parentElement.innerHTML='<i class=\\'fa-solid fa-image text-4xl\\'></i><span class=\\'ml-2\\'>Image not found</span>'">
-                            
-                            <!-- Zoom Icon Overlay -->
-                            <div class="absolute top-2 right-2 bg-black bg-opacity-60 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer pointer-events-none">
-                                <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
-                            </div>
-                        </div>
-                        <div class="p-4">
-                            <div class="flex justify-between items-start mb-2">
-                                <h3 class="font-bold text-lg text-slate-800 leading-tight truncate pr-2" title="${item.title}">${item.title}</h3>
-                                <span class="bg-green-100 text-green-800 text-lg font-bold px-2 py-1 rounded whitespace-nowrap">$${price.toFixed(2)}</span>
-                            </div>
-                            <!-- Button handles selection separately -->
-                            <div class="mt-4 w-full ${btnColor} text-white text-center py-2 rounded font-bold transition shadow-sm cursor-pointer select-none" onclick="toggleSelection('${item.name}', ${price})">${btnText}</div>
-                        </div>`;
-                    grid.appendChild(card);
-                }
-            });
-        }
-
-        function openFolder(folderObj) { currentPath.push(currentFolder); currentFolder = folderObj; render(); window.scrollTo(0, 0); }
-        function goUpLevel() { if (currentPath.length > 0) { currentFolder = currentPath.pop(); render(); } }
-        function goHome() { 
-            currentPath = []; 
-            currentFolder = inventoryDB; 
-            render(); 
-        }
-        function navigateToBreadcrumb(index) { currentFolder = currentPath[index]; currentPath = currentPath.slice(0, index); render(); }
-
-        function toggleSelection(filename, price) {
-            // No cardElement passed because we re-render anyway
-            if (selectedLots.has(filename)) { selectedLots.delete(filename); currentTotal -= price; } 
-            else { selectedLots.add(filename); currentTotal += price; }
-            render(); updateTotalDisplay();
-        }
-
-        function updateTotalDisplay() {
-            currentTotal = Math.max(0, Math.round(currentTotal * 100) / 100);
-            document.getElementById('display-total').textContent = '$' + currentTotal.toFixed(2);
-            const btn = document.getElementById('checkout-btn');
-            if (currentTotal >= MINIMUM_ORDER) {
-                btn.disabled = false;
-                btn.className = "bg-green-600 hover:bg-green-700 cursor-pointer shadow-lg text-white font-bold py-2 px-6 rounded transition-colors text-sm sm:text-base";
-                btn.innerText = `CHECKOUT ($${currentTotal.toFixed(2)})`;
-            } else {
-                btn.disabled = true;
-                btn.className = "bg-gray-600 text-gray-300 font-bold py-2 px-6 rounded opacity-50 cursor-not-allowed transition-colors text-sm sm:text-base";
-                btn.innerText = `CHECKOUT ($500 Min)`;
-            }
-        }
-
-        function processCheckout() {
-            if (currentTotal >= MINIMUM_ORDER) {
-                const lotCount = selectedLots.size;
-                alert(`Proceeding to checkout!\\n\\nLots Selected: ${lotCount}\\nTotal: $${currentTotal.toFixed(2)}`);
-            }
-        }
-        render();
-    </script>
-</body>
-</html>
-"""
-
-def scan_directory(base_path, relative_path=""):
-    contents = []
-    current_scan_path = os.path.join(base_path, relative_path)
-    try:
-        items = os.listdir(current_scan_path)
-    except OSError:
-        return []
-    items.sort()
-    for item in items:
-        if item in IGNORE_LIST: continue
-        full_path = os.path.join(current_scan_path, item)
-        item_rel_path = os.path.join(relative_path, item) if relative_path else item
-        
-        if os.path.isdir(full_path):
-            folder_obj = { "name": item, "type": "folder", "contents": scan_directory(base_path, item_rel_path) }
-            if folder_obj["contents"]: contents.append(folder_obj)
-        elif os.path.isfile(full_path):
-            ext = os.path.splitext(item)[1].lower()
-            if ext in IMAGE_EXTENSIONS:
-                web_path = item_rel_path.replace("\\", "/")
-                contents.append({ "name": web_path, "type": "file", "title": os.path.splitext(item)[0] })
-    return contents
-
-def generate_and_update():
-    # 1. Scan
-    print("--- Scanning Inventory ---")
-    inventory_structure = { "name": "Home", "type": "folder", "contents": scan_directory(SCRIPT_DIR) }
-    
-    # 2. Inject into Template
-    inventory_json = json.dumps(inventory_structure, indent=4)
-    final_html = HTML_TEMPLATE.replace("{INVENTORY_PLACEHOLDER}", inventory_json)
-    
-    # 3. Write index.html
-    try:
-        with open(os.path.join(SCRIPT_DIR, 'index.html'), 'w', encoding='utf-8') as f:
-            f.write(final_html)
-        print("✅ SUCCESS: Rebuilt index.html with new inventory and header.")
-    except Exception as e:
-        print(f"❌ Error writing file: {e}")
-        return False
-    return True
-
-def push_to_github():
-    print("\n--- Uploading to GitHub ---")
-    try:
-        # Check if remote exists
-        remote_check = subprocess.run(["git", "remote", "-v"], capture_output=True, text=True, cwd=SCRIPT_DIR)
-        if not remote_check.stdout:
-             print("❌ Error: No remote repository configured. Please run 'git remote add origin <URL>' manually first.")
-             return
-
-        # Ensure we are on main branch
-        subprocess.run(["git", "branch", "-M", "main"], check=True, cwd=SCRIPT_DIR)
-        
-        # Add all files
-        subprocess.run(["git", "add", "."], check=True, cwd=SCRIPT_DIR)
-        
-        status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=SCRIPT_DIR)
-        if not status.stdout.strip():
-            print("   No changes to upload.")
-            return
-
-        subprocess.run(["git", "commit", "-m", "Auto-update"], check=True, cwd=SCRIPT_DIR)
-        subprocess.run(["git", "push", "-u", "origin", "main"], check=True, cwd=SCRIPT_DIR)
-        print("\n✅ DONE! Website updated.")
-    except subprocess.CalledProcessError as e:
-        print(f"\n❌ Git Error: {e}")
-
-if __name__ == "__main__":
-    if generate_and_update():
-        push_to_github()
-    input("\nPress Enter to exit...")
+            function moveLens(e) {
+                if (result.style.display === "none") return;
+                
+                let pos, x, y;
+                /* Prevent any other actions that may occur when moving over the image */
+                e.preventDefault();
+                /* Get the cursor's x and y positions: */
+                pos = getCursorPos(e);
+                /* Calculate the position of the lens: */
+                x = pos.x - (lens.offsetWidth / 2);
+                y = pos.y - (lens.offsetHeight / 2);
+                
+                /* Prevent the lens from being positioned outside the image: */
+                if (x > img.width - lens.offsetWidth) {x = img.width - lens.offsetWidth;}
+                if (x < 0) {x = 0;}
+                if (y > img.height - lens.offsetHeight) {y = img.height - lens.offsetHeight;}
+                if (y < 0) {y = 0;}
+                
+                /* Set the position of the lens: */
+                lens.style.left = x + "px";
+                lens.style.top = y + "px";

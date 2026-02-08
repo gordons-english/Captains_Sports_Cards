@@ -324,7 +324,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     const folderEl = document.createElement('div');
                     folderEl.className = 'folder-item bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col items-center justify-center text-center h-48';
                     folderEl.onclick = () => openFolder(item);
-                    folderEl.innerHTML = `<i class="fa-solid fa-folder text-6xl text-yellow-500 mb-4"></i><h3 class="text-xl font-bold text-slate-800 truncate w-full" title="${item.name}">${item.name}</h3><p class="text-sm text-gray-500 mt-1">${item.contents ? item.contents.length : 0} Items</p>`;
+                    
+                    const totalFiles = item.total_files || 0;
+                    const totalFolders = item.total_folders || 0;
+                    
+                    folderEl.innerHTML = `<i class="fa-solid fa-folder text-6xl text-yellow-500 mb-4"></i><h3 class="text-xl font-bold text-slate-800 truncate w-full" title="${item.name}">${item.name}</h3>
+                    <p class="text-xs text-gray-500 mt-2 font-mono bg-gray-100 rounded px-2 py-1 inline-block">
+                        <i class="fa-solid fa-layer-group mr-1"></i>${totalFiles} Files / ${totalFolders} Folders
+                    </p>`;
                     grid.appendChild(folderEl);
                 } else {
                     const price = getPriceFromFilename(item.name);
@@ -408,31 +415,55 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 def scan_directory(base_path, relative_path=""):
     contents = []
+    total_files = 0
+    total_folders = 0
+    
     current_scan_path = os.path.join(base_path, relative_path)
     try:
         items = os.listdir(current_scan_path)
     except OSError:
-        return []
+        return [], 0, 0
     items.sort()
+    
     for item in items:
         if item in IGNORE_LIST: continue
         full_path = os.path.join(current_scan_path, item)
         item_rel_path = os.path.join(relative_path, item) if relative_path else item
         
         if os.path.isdir(full_path):
-            folder_obj = { "name": item, "type": "folder", "contents": scan_directory(base_path, item_rel_path) }
-            if folder_obj["contents"]: contents.append(folder_obj)
+            sub_contents, sub_files_count, sub_folders_count = scan_directory(base_path, item_rel_path)
+            if sub_contents: 
+                folder_obj = { 
+                    "name": item, 
+                    "type": "folder", 
+                    "contents": sub_contents,
+                    "total_files": sub_files_count,
+                    "total_folders": sub_folders_count
+                }
+                contents.append(folder_obj)
+                total_folders += 1 + sub_folders_count # Count this folder + its subfolders
+                total_files += sub_files_count # Add files from subfolder
+                
         elif os.path.isfile(full_path):
             ext = os.path.splitext(item)[1].lower()
             if ext in IMAGE_EXTENSIONS:
                 web_path = item_rel_path.replace("\\", "/")
                 contents.append({ "name": web_path, "type": "file", "title": os.path.splitext(item)[0] })
-    return contents
+                total_files += 1
+
+    return contents, total_files, total_folders
 
 def generate_and_update():
     # 1. Scan
     print("--- Scanning Inventory ---")
-    inventory_structure = { "name": "Home", "type": "folder", "contents": scan_directory(SCRIPT_DIR) }
+    contents, total_files, total_folders = scan_directory(SCRIPT_DIR)
+    inventory_structure = { 
+        "name": "Home", 
+        "type": "folder", 
+        "contents": contents,
+        "total_files": total_files,
+        "total_folders": total_folders
+    }
     
     # 2. Inject into Template
     inventory_json = json.dumps(inventory_structure, indent=4)

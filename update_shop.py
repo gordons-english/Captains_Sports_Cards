@@ -358,7 +358,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             });
         }
 
-        function openFolder(folderObj) { currentPath.push(currentFolder); currentFolder = folderObj; render(); window.scrollTo(0, 0); }
+        function openFolder(folderObj) { 
+            currentPath.push(currentFolder); 
+            currentFolder = folderObj; 
+            render(); 
+            // Removed: window.scrollTo(0, 0); 
+        }
         function goUpLevel() { if (currentPath.length > 0) { currentFolder = currentPath.pop(); render(); } }
         function goHome() { 
             currentPath = []; 

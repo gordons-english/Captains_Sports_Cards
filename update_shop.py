@@ -37,11 +37,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             background-color: rgba(0, 0, 0, 0.9);
         }
         #zoom-modal.active { pointer-events: auto; opacity: 1; }
+        #zoom-container {
+            overflow: auto;
+            max-height: 90vh;
+            max-width: 90vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         #zoom-img {
             max-height: 90vh;
             max-width: 90vw;
             object-fit: contain;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            cursor: zoom-in;
+            transition: transform 0.2s ease;
+        }
+        #zoom-img.zoomed {
+            max-height: none;
+            max-width: none;
+            cursor: zoom-out;
+            transform: scale(2); /* Zoom level */
         }
     </style>
 </head>
@@ -49,10 +65,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
     <!-- ZOOM MODAL -->
     <div id="zoom-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" onclick="closeZoom()">
-        <div class="relative">
-            <img id="zoom-img" src="" class="rounded" onclick="event.stopPropagation()">
-            <button class="absolute -top-10 right-0 text-white text-4xl hover:text-gray-300 focus:outline-none" onclick="closeZoom()">&times;</button>
+        <div id="zoom-container" onclick="event.stopPropagation()">
+            <img id="zoom-img" src="" class="rounded" onclick="toggleImageZoom(event)">
         </div>
+        <button class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 focus:outline-none z-[101]" onclick="closeZoom()">&times;</button>
     </div>
 
     <!-- STICKY TOTAL BAR -->
@@ -139,12 +155,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function openZoom(src) {
-            document.getElementById('zoom-img').src = src;
+            const img = document.getElementById('zoom-img');
+            img.src = src;
+            img.classList.remove('zoomed'); // Reset zoom state
             document.getElementById('zoom-modal').classList.add('active');
         }
 
         function closeZoom() {
             document.getElementById('zoom-modal').classList.remove('active');
+        }
+
+        function toggleImageZoom(event) {
+            event.stopPropagation(); // Prevent closing modal
+            const img = document.getElementById('zoom-img');
+            img.classList.toggle('zoomed');
         }
 
         function render() {

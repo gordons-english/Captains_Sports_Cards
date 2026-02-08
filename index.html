@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captain's Sports Cards | Wholesale Vault</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Roboto:wght@400;500;700&display=swap');
+        
+        body { font-family: 'Roboto', sans-serif; }
+        h1, h2, h3, .brand-font { font-family: 'Oswald', sans-serif; }
+
+        .card-lot { transition: all 0.2s ease; }
+        .card-lot:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+        .card-lot.selected { border: 4px solid #10B981; opacity: 0.9; transform: scale(0.98); }
+        
+        .folder-item { transition: all 0.2s ease; cursor: pointer; }
+        .folder-item:hover { background-color: #f3f4f6; transform: scale(1.02); }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- STICKY TOTAL BAR -->
+    <div class="fixed top-0 left-0 w-full bg-slate-900 text-white shadow-lg z-50 border-b-4 border-yellow-500">
+        <div class="container mx-auto px-4 h-16 flex justify-between items-center">
+            <div class="flex items-center space-x-2 cursor-pointer" onclick="goHome()">
+                <i class="fa-solid fa-layer-group text-yellow-500 text-xl"></i>
+                <span class="text-xl font-bold brand-font tracking-wider">CAPTAIN'S VAULT</span>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <div class="text-right hidden sm:block">
+                    <div class="text-xs text-gray-400 uppercase font-semibold">Current Order Total</div>
+                    <div class="text-2xl font-bold text-green-400 font-mono" id="display-total">$0.00</div>
+                </div>
+                <button id="checkout-btn" onclick="processCheckout()" disabled class="bg-gray-600 text-gray-300 font-bold py-2 px-6 rounded opacity-50 cursor-not-allowed transition-colors text-sm sm:text-base">
+                    CHECKOUT ($500 Min)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SPACING -->
+    <div class="h-16"></div>
+
+    <!-- HEADER -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="container mx-auto px-4 py-8 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900 mb-2 uppercase">Wholesale Vault</h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">Browse the folders below. One image equals one lot. Prices are listed in the filename.</p>
+            
+            <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100 inline-block text-left max-w-lg">
+                <h3 class="font-bold text-blue-800 mb-2"><i class="fa-solid fa-circle-info mr-2"></i>How It Works:</h3>
+                <ul class="text-sm text-blue-900 space-y-1">
+                    <li>• <strong>One Image = One Lot:</strong> You buy the entire group shown.</li>
+                    <li>• <strong>Transparent Pricing:</strong> Price is in the filename (e.g., <code>..._25.00.jpg</code>).</li>
+                    <li>• <strong>Click to Add:</strong> Clicking an image adds it to your total.</li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- BREADCRUMBS & NAVIGATION -->
+    <div class="bg-gray-200 shadow-inner border-b border-gray-300">
+        <div class="container mx-auto px-4 py-3 flex items-center space-x-2 text-sm md:text-base overflow-x-auto">
+            <button onclick="goHome()" class="text-blue-600 hover:text-blue-800 font-bold"><i class="fa-solid fa-home"></i> Home</button>
+            <span class="text-gray-400">/</span>
+            <div id="breadcrumbs" class="flex items-center space-x-2 font-medium text-gray-700 whitespace-nowrap">
+                <!-- Breadcrumbs injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="container mx-auto px-4 py-8 pb-24">
+        
+        <!-- Back Button (Hidden on Home) -->
+        <div id="back-button-container" class="mb-6 hidden">
+            <button onclick="goUpLevel()" class="flex items-center text-gray-600 hover:text-slate-900 font-bold transition">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Back to Previous Folder
+            </button>
+        </div>
+
+        <!-- GRID -->
+        <div id="content-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Content injected via JS -->
+        </div>
+
+    </main>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- 1. INVENTORY CONFIGURATION ---
+        // This object will be automatically updated by your update_shop.py script.
+        const inventoryDB = {
+    "name": "Home",
+    "type": "folder",
+    "contents": [
+        {
+            "name": "All Stars",
+            "type": "folder",
+            "contents": [
+                {
+                    "name": "All Stars/1968 All Stars$100.jpg",
+                    "type": "file",
+                    "title": "1968 All Stars$100"
+                },
+                {
+                    "name": "All Stars/1973_All_Stars_$50.jpg",
+                    "type": "file",
+                    "title": "1973_All_Stars_$50"
+                }
+            ]
+        },
+        {
+            "name": "Vintage",
+            "type": "folder",
+            "contents": [
+                {
+                    "name": "Leaders",
+                    "type": "folder",
+                    "contents": [
+                        {
+                            "name": "Vintage/Leaders/1965_Leaders_$100.jpg",
+                            "type": "file",
+                            "title": "1965_Leaders_$100"
+                        },
+                        {
+                            "name": "Vintage/Leaders/1968_HR_Leaders_$50.jpg",
+                            "type": "file",
+                            "title": "1968_HR_Leaders_$50"
+                        },
+                        {
+                            "name": "Vintage/Leaders/1969_Leaders_$120.jpg",
+                            "type": "file",
+                            "title": "1969_Leaders_$120"
+                        }
+                    ]
+                },
+                {
+                    "name": "Rookies",
+                    "type": "folder",
+                    "contents": [
+                        {
+                            "name": "Vintage/Rookies/1963_64_65_66_Rookie_Stars$100.jpg",
+                            "type": "file",
+                            "title": "1963_64_65_66_Rookie_Stars$100"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+};
+
+        // --- 2. STATE MANAGEMENT ---
+        let currentPath = []; // Array of folder objects representing path
+        let currentFolder = inventoryDB; // Current folder object
+        const MINIMUM_ORDER = 500.00;
+        let currentTotal = 0.00;
+        let selectedLots = new Set(); // Stores filenames of selected images
+
+        // --- 3. CORE FUNCTIONS ---
+
+        function getPriceFromFilename(filename) {
+            // Regex finds the last number before .jpg/.png
+            // Matches "_123.45.jpg" or "_50.jpg"
+            const match = filename.match(/_([0-9]+\.?[0-9]*)\.(jpg|jpeg|png|webp)$/i);
+            return (match && match[1]) ? parseFloat(match[1]) : 0.00;
+        }
+
+        function render() {
+            const grid = document.getElementById('content-grid');
+            const breadcrumbs = document.getElementById('breadcrumbs');
+            const backBtn = document.getElementById('back-button-container');
+            
+            grid.innerHTML = '';
+            breadcrumbs.innerHTML = '';
+
+            // 1. Render Breadcrumbs
+            if (currentPath.length === 0) {
+                breadcrumbs.innerHTML = '<span class="text-gray-500">Main Vault</span>';
+                backBtn.classList.add('hidden');
+            } else {
+                let html = '';
+                currentPath.forEach((folder, index) => {
+                    html += `<span class="cursor-pointer hover:underline text-blue-600" onclick="navigateToBreadcrumb(${index})">${folder.name}</span>`;
+                    if (index < currentPath.length - 1) html += ` <span class="text-gray-400">/</span> `;
+                });
+                if (currentPath.length > 0) {
+                     html += ` <span class="text-gray-400">/</span> <span class="text-slate-900 font-bold">${currentFolder.name}</span>`;
+                }
+                breadcrumbs.innerHTML = html;
+                backBtn.classList.remove('hidden');
+            }
+
+            // 2. Render Folder Contents
+            const contents = currentFolder.contents || [];
+            const sortedContents = [...contents].sort((a, b) => {
+                if (a.type === b.type) return 0;
+                return a.type === 'folder' ? -1 : 1;
+            });
+
+            if (sortedContents.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400">
+                    <i class="fa-regular fa-folder-open text-6xl mb-4"></i>
+                    <p>This folder is empty.</p>
+                </div>`;
+                return;
+            }
+
+            sortedContents.forEach(item => {
+                if (item.type === 'folder') {
+                    // RENDER FOLDER CARD
+                    const folderEl = document.createElement('div');
+                    folderEl.className = 'folder-item bg-white p-6 rounded-lg shadow border border-gray-200 flex flex-col items-center justify-center text-center h-48';
+                    folderEl.onclick = () => openFolder(item);
+                    folderEl.innerHTML = `
+                        <i class="fa-solid fa-folder text-6xl text-yellow-500 mb-4"></i>
+                        <h3 class="text-xl font-bold text-slate-800 truncate w-full" title="${item.name}">${item.name}</h3>
+                        <p class="text-sm text-gray-500 mt-1">${item.contents ? item.contents.length : 0} Items</p>
+                    `;
+                    grid.appendChild(folderEl);
+                } else {
+                    // RENDER FILE (CARD LOT)
+                    const price = getPriceFromFilename(item.name);
+                    const isSelected = selectedLots.has(item.name);
+                    
+                    const card = document.createElement('div');
+                    card.className = `card-lot bg-white rounded-lg shadow overflow-hidden relative cursor-pointer ${isSelected ? 'selected' : ''}`;
+                    card.onclick = () => toggleSelection(item.name, price, card);
+                    
+                    const encodedPath = item.name.split('/').map(encodeURIComponent).join('/');
+
+                    const imgDisplay = `
+                        <div class="h-64 bg-slate-200 flex items-center justify-center text-slate-400 relative overflow-hidden group">
+                            <img src="${encodedPath}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onerror="this.parentElement.innerHTML='<i class=\'fa-solid fa-image text-4xl\'></i><span class=\'ml-2\'>Image not found</span>'">
+                            <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300"></div>
+                        </div>
+                    `;
+
+                    const btnColor = isSelected ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700';
+                    const btnText = isSelected ? '<i class="fa-solid fa-times mr-1"></i> Remove' : '<i class="fa-solid fa-cart-plus mr-1"></i> Add';
+
+                    const bodyDisplay = `
+                        <div class="p-4">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-bold text-lg text-slate-800 leading-tight truncate pr-2" title="${item.title}">${item.title}</h3>
+                                <span class="bg-green-100 text-green-800 text-lg font-bold px-2 py-1 rounded whitespace-nowrap">
+                                    $${price.toFixed(2)}
+                                </span>
+                            </div>
+                            <div class="mt-4 w-full ${btnColor} text-white text-center py-2 rounded font-bold transition shadow-sm">
+                                ${btnText}
+                            </div>
+                        </div>
+                    `;
+
+                    card.innerHTML = imgDisplay + bodyDisplay;
+                    grid.appendChild(card);
+                }
+            });
+        }
+
+        // --- 4. NAVIGATION ACTIONS ---
+
+        function openFolder(folderObj) {
+            currentPath.push(currentFolder); 
+            currentFolder = folderObj;
+            render();
+            window.scrollTo(0, 0);
+        }
+
+        function goUpLevel() {
+            if (currentPath.length > 0) {
+                currentFolder = currentPath.pop(); 
+                render();
+            }
+        }
+
+        function goHome() {
+            currentPath = [];
+            currentFolder = inventoryDB;
+            render();
+        }
+
+        function navigateToBreadcrumb(index) {
+            const targetFolder = currentPath[index]; 
+            currentPath = currentPath.slice(0, index);
+            currentFolder = targetFolder;
+            render();
+        }
+
+        // --- 5. SHOPPING CART LOGIC ---
+
+        function toggleSelection(filename, price, cardElement) {
+            if (selectedLots.has(filename)) {
+                selectedLots.delete(filename);
+                currentTotal -= price;
+            } else {
+                selectedLots.add(filename);
+                currentTotal += price;
+            }
+            render();
+            updateTotalDisplay();
+        }
+
+        function updateTotalDisplay() {
+            currentTotal = Math.max(0, Math.round(currentTotal * 100) / 100);
+            
+            const display = document.getElementById('display-total');
+            const btn = document.getElementById('checkout-btn');
+            
+            display.textContent = '$' + currentTotal.toFixed(2);
+            
+            display.classList.add('scale-110');
+            setTimeout(() => display.classList.remove('scale-110'), 200);
+
+            if (currentTotal >= MINIMUM_ORDER) {
+                btn.disabled = false;
+                btn.classList.remove('bg-gray-600', 'opacity-50', 'cursor-not-allowed');
+                btn.classList.add('bg-green-600', 'hover:bg-green-700', 'cursor-pointer', 'shadow-lg');
+                btn.innerText = `CHECKOUT ($${currentTotal.toFixed(2)})`;
+            } else {
+                btn.disabled = true;
+                btn.classList.add('bg-gray-600', 'opacity-50', 'cursor-not-allowed');
+                btn.classList.remove('bg-green-600', 'hover:bg-green-700', 'cursor-pointer', 'shadow-lg');
+                btn.innerText = `CHECKOUT ($500 Min)`;
+            }
+        }
+
+        function processCheckout() {
+            if (currentTotal >= MINIMUM_ORDER) {
+                const lotCount = selectedLots.size;
+                const lotList = Array.from(selectedLots).join('\n');
+                alert(`Proceeding to checkout!\n\nLots Selected: ${lotCount}\nTotal: $${currentTotal.toFixed(2)}\n\n(This is a demo checkout. In a real version, this would redirect to payment.)`);
+            }
+        }
+
+        // Initialize
+        render();
+
+    </script>
+</body>
+</html>

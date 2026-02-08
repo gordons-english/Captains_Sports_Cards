@@ -106,8 +106,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 <h3 class="font-bold text-blue-800 mb-2 border-b border-blue-200 pb-1"><i class="fa-solid fa-circle-info mr-2"></i>How It Works:</h3>
                 <ul class="text-sm text-blue-900 space-y-2 mt-2">
                     <li class="flex items-start"><i class="fa-solid fa-images mt-1 mr-2 opacity-70"></i> <span><strong>One Image = One Group:</strong> You are purchasing the entire group of cards shown. We do not pick individual cards.</span></li>
-                    <li class="flex items-start"><i class="fa-solid fa-tag mt-1 mr-2 opacity-70"></i> <span><strong>Transparent Pricing:</strong> The price for the group is listed in the filename (e.g., <code>..._25.00.jpg</code>).</span></li>
-                    <li class="flex items-start"><i class="fa-solid fa-calculator mt-1 mr-2 opacity-70"></i> <span><strong>Click Add:</strong> Use the Add button to put the group in your cart.</span></li>
+                    <li class="flex items-start"><i class="fa-solid fa-folder-open mt-1 mr-2 opacity-70"></i> <span><strong>Large Lots:</strong> Specific folders containing many images are called "Lots" (e.g., Lot 1). The price for the entire lot is listed on the folder name.</span></li>
+                    <li class="flex items-start"><i class="fa-solid fa-tag mt-1 mr-2 opacity-70"></i> <span><strong>Transparent Pricing:</strong> The price for a Group is listed in the filename (e.g., <code>..._25.00.jpg</code>).</span></li>
+                    <li class="flex items-start"><i class="fa-solid fa-calculator mt-1 mr-2 opacity-70"></i> <span><strong>Click Add:</strong> Use the Add button to put the Group in your cart.</span></li>
                 </ul>
                 <div class="mt-4 pt-3 border-t border-blue-200 text-center">
                     <a href="#" class="text-blue-700 font-bold hover:underline text-xs uppercase tracking-wide">

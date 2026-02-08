@@ -38,37 +38,42 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         #zoom-modal.active { pointer-events: auto; opacity: 1; }
         #zoom-container {
-            overflow: auto;
-            max-height: 90vh;
-            max-width: 90vw;
+            width: 100%;
+            height: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
+            overflow: hidden; /* Hide scrollbars, we use drag */
+            cursor: grab;
+        }
+        #zoom-container.grabbing {
+            cursor: grabbing;
         }
         #zoom-img {
             max-height: 90vh;
             max-width: 90vw;
             object-fit: contain;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            cursor: zoom-in;
-            transition: transform 0.2s ease;
+            transition: transform 0.3s ease; /* Smooth zoom */
+            transform-origin: center center;
         }
         #zoom-img.zoomed {
             max-height: none;
             max-width: none;
-            cursor: zoom-out;
-            transform: scale(2); /* Zoom level */
+            /* Scale is handled by JS now for point-zoom */
         }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
     <!-- ZOOM MODAL -->
-    <div id="zoom-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" onclick="closeZoom()">
-        <div id="zoom-container" onclick="event.stopPropagation()">
-            <img id="zoom-img" src="" class="rounded" onclick="toggleImageZoom(event)">
+    <div id="zoom-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <!-- Close button needs to be outside the drag area or highest z-index -->
+        <button class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 focus:outline-none z-[102]" onclick="closeZoom()">&times;</button>
+        
+        <div id="zoom-container" onmousedown="startDrag(event)" onmouseup="endDrag()" onmouseleave="endDrag()" onmousemove="drag(event)" onclick="handleZoomClick(event)">
+            <img id="zoom-img" src="" class="rounded" draggable="false">
         </div>
-        <button class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300 focus:outline-none z-[101]" onclick="closeZoom()">&times;</button>
     </div>
 
     <!-- STICKY TOTAL BAR -->
@@ -146,10 +151,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let currentTotal = 0.00;
         let selectedLots = new Set();
 
+        // Zoom State
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+        let scale = 1;
+        let isZoomed = false;
+
         // --- FUNCTIONS ---
         function getPriceFromFilename(filename) {
-            // Updated Regex to handle $ signs, spaces, and various formats
-            // Looks for numbers at the end of the filename
             const match = filename.match(/[\$_ ]([0-9]+\.?[0-9]*)\.(jpg|jpeg|png|webp|gif)$/i);
             return (match && match[1]) ? parseFloat(match[1]) : 0.00;
         }
@@ -157,7 +166,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         function openZoom(src) {
             const img = document.getElementById('zoom-img');
             img.src = src;
-            img.classList.remove('zoomed'); // Reset zoom state
+            // Reset zoom state
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            isZoomed = false;
+            img.style.transform = `translate(0px, 0px) scale(1)`;
+            img.classList.remove('zoomed');
             document.getElementById('zoom-modal').classList.add('active');
         }
 
@@ -165,10 +180,74 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             document.getElementById('zoom-modal').classList.remove('active');
         }
 
-        function toggleImageZoom(event) {
-            event.stopPropagation(); // Prevent closing modal
+        function handleZoomClick(event) {
+            if (isDragging) return; // Don't zoom if we just dragged
+
             const img = document.getElementById('zoom-img');
-            img.classList.toggle('zoomed');
+            const container = document.getElementById('zoom-container');
+
+            if (!isZoomed) {
+                // ZOOM IN
+                isZoomed = true;
+                scale = 2.5; // Zoom level
+                
+                // Calculate click position relative to the image
+                const rect = img.getBoundingClientRect();
+                const offsetX = event.clientX - rect.left;
+                const offsetY = event.clientY - rect.top;
+
+                // Calculate the percentage of the click position
+                const percentX = offsetX / rect.width;
+                const percentY = offsetY / rect.height;
+
+                // Set transform origin to the click position
+                img.style.transformOrigin = `${percentX * 100}% ${percentY * 100}%`;
+                img.style.transform = `scale(${scale})`;
+                
+                // Change cursor to grab
+                container.style.cursor = 'grab';
+                img.classList.add('zoomed');
+            } else {
+                // ZOOM OUT (Reset)
+                isZoomed = false;
+                scale = 1;
+                translateX = 0;
+                translateY = 0;
+                img.style.transform = `translate(0px, 0px) scale(1)`;
+                container.style.cursor = 'zoom-in';
+                img.classList.remove('zoomed');
+            }
+        }
+
+        function startDrag(e) {
+            if (!isZoomed) return;
+            isDragging = false; // Will set to true on move
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            document.getElementById('zoom-container').classList.add('grabbing');
+            // Prevent default drag behavior
+            e.preventDefault(); 
+        }
+
+        function endDrag() {
+            document.getElementById('zoom-container').classList.remove('grabbing');
+            // Delay resetting isDragging slightly so click event knows if it was a drag
+            setTimeout(() => isDragging = false, 50); 
+        }
+
+        function drag(e) {
+            if (document.getElementById('zoom-container').classList.contains('grabbing') && isZoomed) {
+                e.preventDefault();
+                isDragging = true;
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                const img = document.getElementById('zoom-img');
+                // Keep transform-origin logic but add translation
+                // Note: Mixing origin-based zoom with translation can be tricky. 
+                // Simpler approach for pan: Just translate.
+                // But since we used origin for the initial zoom target, we need to maintain scale.
+                img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+            }
         }
 
         function render() {

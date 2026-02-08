@@ -112,9 +112,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     <ol class="text-sm text-gray-700 space-y-2 list-decimal list-inside">
                         <li><strong>Browse Collections:</strong> Click on folders (e.g., "Hall of Famers", "Yankees") to explore our inventory.</li>
                         <li><strong>One Image = One Group:</strong> You are purchasing the entire group of cards shown. We do not pick individual cards.</li>
-                        <li><strong>Large Lots:</strong> Specific folders containing many images are called "Lots" (e.g., Lot 1). The price for the entire lot is listed on the folder name.</li>
+                        <li><strong>Transparent Pricing:</strong> The price for each Group is in the filename (e.g., <code>..._25.00.jpg</code>). For large <strong>"Lots"</strong> (folders with many images), the price for the entire lot is listed on the folder name.</li>
                         <li><strong>Inspect Condition:</strong> Click the magnifying glass icon on any image to open a high-resolution zoom window. Use your mouse wheel (with Ctrl) to zoom in further and drag to inspect details.</li>
-                        <li><strong>Transparent Pricing:</strong> The price for the entire group is listed directly in the file name (e.g., <code>..._25.00.jpg</code>).</li>
                         <li><strong>Build Your Order:</strong> Click the <strong>"Add to Cart"</strong> button below any image to add it to your order.</li>
                         <li><strong>Track Total:</strong> Your running total is displayed at the top of the screen.</li>
                         <li><strong>Checkout:</strong> Once your order meets the <strong>$500 Minimum</strong>, the Checkout button will activate. Click it to finalize your purchase.</li>

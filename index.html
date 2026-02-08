@@ -17,16 +17,29 @@
         .folder-item:hover { background-color: #f3f4f6; transform: scale(1.02); }
         
         /* Modal for Zoom */
-        #zoom-modal { transition: opacity 0.3s ease; pointer-events: none; opacity: 0; }
+        #zoom-modal { 
+            transition: opacity 0.3s ease; 
+            pointer-events: none; 
+            opacity: 0; 
+            background-color: rgba(0, 0, 0, 0.9);
+        }
         #zoom-modal.active { pointer-events: auto; opacity: 1; }
+        #zoom-img {
+            max-height: 90vh;
+            max-width: 90vw;
+            object-fit: contain;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
     <!-- ZOOM MODAL -->
-    <div id="zoom-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-90 p-4" onclick="closeZoom()">
-        <img id="zoom-img" src="" class="max-w-full max-h-full rounded shadow-2xl" onclick="event.stopPropagation()">
-        <button class="absolute top-4 right-4 text-white text-4xl hover:text-gray-300" onclick="closeZoom()">&times;</button>
+    <div id="zoom-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-4" onclick="closeZoom()">
+        <div class="relative">
+            <img id="zoom-img" src="" class="rounded" onclick="event.stopPropagation()">
+            <button class="absolute -top-10 right-0 text-white text-4xl hover:text-gray-300 focus:outline-none" onclick="closeZoom()">&times;</button>
+        </div>
     </div>
 
     <!-- STICKY TOTAL BAR -->
@@ -232,7 +245,7 @@
                     const encodedPath = item.name.split('/').map(encodeURIComponent).join('/');
                     
                     const btnColor = isSelected ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700';
-                    const btnText = isSelected ? '<i class="fa-solid fa-times mr-1"></i> Remove' : '<i class="fa-solid fa-cart-plus mr-1"></i> Add';
+                    const btnText = isSelected ? '<i class="fa-solid fa-trash mr-1"></i> Remove' : '<i class="fa-solid fa-cart-plus mr-1"></i> Add to Cart';
 
                     card.innerHTML = `
                         <div class="h-64 bg-slate-200 flex items-center justify-center text-slate-400 relative overflow-hidden group">
@@ -240,7 +253,7 @@
                             
                             <!-- Zoom Icon Overlay -->
                             <div class="absolute top-2 right-2 bg-black bg-opacity-60 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer pointer-events-none">
-                                <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
                             </div>
                         </div>
                         <div class="p-4">
@@ -249,7 +262,7 @@
                                 <span class="bg-green-100 text-green-800 text-lg font-bold px-2 py-1 rounded whitespace-nowrap">$${price.toFixed(2)}</span>
                             </div>
                             <!-- Button handles selection separately -->
-                            <div class="mt-4 w-full ${btnColor} text-white text-center py-2 rounded font-bold transition shadow-sm cursor-pointer" onclick="toggleSelection('${item.name}', ${price})">${btnText}</div>
+                            <div class="mt-4 w-full ${btnColor} text-white text-center py-2 rounded font-bold transition shadow-sm cursor-pointer select-none" onclick="toggleSelection('${item.name}', ${price})">${btnText}</div>
                         </div>`;
                     grid.appendChild(card);
                 }
